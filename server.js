@@ -12,59 +12,50 @@ const io = new Server(server, {
   }
 });
 
+// Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Store room occupancy
-const rooms = {};
+// Serve room.html for any 4-digit URL path (e.g. /1234)
+app.get('/:roomId', (req, res) => {
+  const roomId = req.params.roomId;
+  // Simple validation to ensure it's a 4-digit code route
+  if (/^\d{4}$/.test(roomId)) {
+    res.sendFile(path.join(__dirname, 'public', 'room.html'));
+  } else {
+    res.status(404).send('Invalid Room URL');
+  }
+});
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Join a room with maximum 4 people limit
   socket.on('join-room', (roomId) => {
     const room = io.sockets.adapter.rooms.get(roomId);
     const numClients = room ? room.size : 0;
 
-    // Room limit check (max 4 people)
     if (numClients >= 4) {
       socket.emit('room-full', { message: 'Room is full (Maximum 4 participants).' });
       return;
     }
 
-    // Get list of existing users in the room BEFORE joining
     const existingUsers = Array.from(room || []);
-
     socket.join(roomId);
     socket.roomId = roomId;
 
-    // Send the list of current participants to the newly joined user
     socket.emit('all-users', existingUsers);
 
-    // Relay WebRTC Offer to target peer
     socket.on('offer', (data) => {
-      io.to(data.target).emit('offer', {
-        sdp: data.sdp,
-        caller: socket.id
-      });
+      io.to(data.target).emit('offer', { sdp: data.sdp, caller: socket.id });
     });
 
-    // Relay WebRTC Answer to target peer
     socket.on('answer', (data) => {
-      io.to(data.target).emit('answer', {
-        sdp: data.sdp,
-        responder: socket.id
-      });
+      io.to(data.target).emit('answer', { sdp: data.sdp, responder: socket.id });
     });
 
-    // Relay ICE Candidates to target peer
     socket.on('ice-candidate', (data) => {
-      io.to(data.target).emit('ice-candidate', {
-        candidate: data.candidate,
-        from: socket.id
-      });
+      io.to(data.target).emit('ice-candidate', { candidate: data.candidate, from: socket.id });
     });
 
-    // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
       if (socket.roomId) {
