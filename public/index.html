@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Render Video Call App</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .room-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px 15px;
+      font-size: 16px;
+      border: 1px solid #333;
+      border-radius: 6px;
+      outline: none;
+      background-color: #1e1e1e;
+      color: #fff;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    .video-card {
+      position: relative;
+      background-color: #1e1e1e;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .label {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>WebRTC Video Call</h1>
+
+  <div class="room-container">
+    <input type="text" id="roomIdInput" placeholder="Enter Room ID (e.g. room123)" />
+    <button id="joinBtn">Join Room</button>
+  </div>
+
+  <div class="video-grid">
+    <div class="video-card">
+      <video id="localVideo" autoplay playsinline muted></video>
+      <div class="label">You</div>
+    </div>
+    <div class="video-card">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="label">Peer</div>
+    </div>
+  </div>
+
+  <!-- Socket.IO client library auto-served by server -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const roomIdInput = document.getElementById('roomIdInput');
+    const joinBtn = document.getElementById('joinBtn');
+
+    let localStream;
+    let peerConnection;
+    let roomId;
+    let targetPeerId;
+
+    // Public STUN servers for WebRTC NAT traversal
+    const rtcConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    // Initialize Local Media Stream (Camera + Microphone)
+    async function initLocalStream() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+      } catch (err) {
+        console.error('Error accessing media devices:', err);
+        alert('Could not access camera or microphone.');
+      }
+    }
+
+    initLocalStream();
+
+    // Join Room Event
+    joinBtn.addEventListener('click', () => {
+      roomId = roomIdInput.value.trim();
+      if (!roomId) return alert('Please enter a Room ID');
+      
+      socket.emit('join-room', roomId);
+      joinBtn.disabled = true;
+      roomIdInput.disabled = true;
+    });
+
+    // When another user joins the room
+    socket.on('user-connected', async (peerId) => {
+      targetPeerId = peerId;
+      createPeerConnection(peerId);
+
+      // Create SDP Offer
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      socket.emit('offer', {
+        target: peerId,
+        sdp: offer
+      });
+    });
+
+    // Receive Offer
+    socket.on('offer', async (data) => {
+      targetPeerId = data.caller;
+      createPeerConnection(data.caller);
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      socket.emit('answer', {
+        target: data.caller,
+        sdp: answer
+      });
+    });
+
+    // Receive Answer
+    socket.on('answer', async (data) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    });
+
+    // Receive ICE Candidate
+    socket.on('ice-candidate', async (data) => {
+      try {
+        if (peerConnection) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      } catch (e) {
+        console.error('Error adding ICE candidate:', e);
+      }
+    });
+
+    // Peer disconnected
+    socket.on('user-disconnected', () => {
+      if (remoteVideo.srcObject) {
+        remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+        remoteVideo.srcObject = null;
+      }
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+    });
+
+    // Create RTCPeerConnection object
+    function createPeerConnection(peerId) {
+      peerConnection = new RTCPeerConnection(rtcConfig);
+
+      // Add local media tracks to connection
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+
+      // Handle incoming remote media stream
+      peerConnection.ontrack = (event) => {
+        if (remoteVideo.srcObject !== event.streams[0]) {
+          remoteVideo.srcObject = event.streams[0];
+        }
+      };
+
+      // Handle ICE Candidates generated locally
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', {
+            target: peerId,
+            candidate: event.candidate
+          });
+        }
+      };
+    }
+  </script>
+</body>
+</html>
