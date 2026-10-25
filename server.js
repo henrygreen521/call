@@ -14,45 +14,62 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Store room occupancy
+const rooms = {};
+
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Host or Join a room
+  // Join a room with maximum 4 people limit
   socket.on('join-room', (roomId) => {
-    socket.join(roomId);
-    console.log(`User ${socket.id} joined room: ${roomId}`);
-    
-    // Notify other users already in the room
-    socket.to(roomId).emit('user-connected', socket.id);
+    const room = io.sockets.adapter.rooms.get(roomId);
+    const numClients = room ? room.size : 0;
 
-    // Relay WebRTC SDP Offer
+    // Room limit check (max 4 people)
+    if (numClients >= 4) {
+      socket.emit('room-full', { message: 'Room is full (Maximum 4 participants).' });
+      return;
+    }
+
+    // Get list of existing users in the room BEFORE joining
+    const existingUsers = Array.from(room || []);
+
+    socket.join(roomId);
+    socket.roomId = roomId;
+
+    // Send the list of current participants to the newly joined user
+    socket.emit('all-users', existingUsers);
+
+    // Relay WebRTC Offer to target peer
     socket.on('offer', (data) => {
-      socket.to(data.target).emit('offer', {
+      io.to(data.target).emit('offer', {
         sdp: data.sdp,
         caller: socket.id
       });
     });
 
-    // Relay WebRTC SDP Answer
+    // Relay WebRTC Answer to target peer
     socket.on('answer', (data) => {
-      socket.to(data.target).emit('answer', {
+      io.to(data.target).emit('answer', {
         sdp: data.sdp,
         responder: socket.id
       });
     });
 
-    // Relay ICE Candidates
+    // Relay ICE Candidates to target peer
     socket.on('ice-candidate', (data) => {
-      socket.to(data.target).emit('ice-candidate', {
+      io.to(data.target).emit('ice-candidate', {
         candidate: data.candidate,
         from: socket.id
       });
     });
 
-    // Handle user disconnect
+    // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
-      socket.to(roomId).emit('user-disconnected', socket.id);
+      if (socket.roomId) {
+        socket.to(socket.roomId).emit('user-disconnected', socket.id);
+      }
     });
   });
 });
