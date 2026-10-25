@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mrgreens vibecoded google meet</title>
+ <link rel="icon" type="image/png" href="https://i.postimg.cc/JhkxQHWc/jakereal.jpg" />
+  <title>MrGreens Vibecoded Google Meet</title>
   <style>
     * {
       box-sizing: border-box;
@@ -26,10 +27,25 @@
       margin-bottom: 20px;
     }
 
-    .room-container {
+    .controls-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .action-row {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      width: 100%;
+      justify-content: center;
     }
 
     input {
@@ -38,8 +54,10 @@
       border: 1px solid #333;
       border-radius: 6px;
       outline: none;
-      background-color: #1e1e1e;
+      background-color: #2a2a2a;
       color: #fff;
+      text-align: center;
+      letter-spacing: 2px;
     }
 
     button {
@@ -55,6 +73,20 @@
 
     button:hover {
       background-color: #0056b3;
+    }
+
+    button.secondary {
+      background-color: #28a745;
+    }
+    button.secondary:hover {
+      background-color: #218838;
+    }
+
+    #roomDisplay {
+      font-size: 18px;
+      font-weight: bold;
+      color: #4cd137;
+      margin-top: 5px;
     }
 
     .video-grid {
@@ -93,11 +125,20 @@
 </head>
 <body>
 
-  <h1>WebRTC Video Call</h1>
+  <h1>Video Call App</h1>
 
-  <div class="room-container">
-    <input type="text" id="roomIdInput" placeholder="Enter Room ID (e.g. room123)" />
-    <button id="joinBtn">Join Room</button>
+  <div class="controls-container" id="setupContainer">
+    <!-- Host Section -->
+    <button id="hostBtn" class="secondary">Host a Room</button>
+    <div id="roomDisplay"></div>
+
+    <hr style="width:100%; border:0; border-top:1px solid #333; margin: 5px 0;">
+
+    <!-- Join Section -->
+    <div class="action-row">
+      <input type="text" id="roomIdInput" placeholder="Enter 4-Digit Code" maxlength="4" />
+      <button id="joinBtn">Join Room</button>
+    </div>
   </div>
 
   <div class="video-grid">
@@ -111,7 +152,6 @@
     </div>
   </div>
 
-  <!-- Socket.IO client library auto-served by server -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
@@ -120,13 +160,14 @@
     const remoteVideo = document.getElementById('remoteVideo');
     const roomIdInput = document.getElementById('roomIdInput');
     const joinBtn = document.getElementById('joinBtn');
+    const hostBtn = document.getElementById('hostBtn');
+    const roomDisplay = document.getElementById('roomDisplay');
+    const setupContainer = document.getElementById('setupContainer');
 
     let localStream;
     let peerConnection;
     let roomId;
-    let targetPeerId;
 
-    // Public STUN servers for WebRTC NAT traversal
     const rtcConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -134,7 +175,7 @@
       ]
     };
 
-    // Initialize Local Media Stream (Camera + Microphone)
+    // Initialize Camera/Mic
     async function initLocalStream() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -147,22 +188,37 @@
 
     initLocalStream();
 
-    // Join Room Event
-    joinBtn.addEventListener('click', () => {
-      roomId = roomIdInput.value.trim();
-      if (!roomId) return alert('Please enter a Room ID');
+    // Host Action: Generate random 4-digit code
+    hostBtn.addEventListener('click', () => {
+      roomId = Math.floor(1000 + Math.random() * 9000).toString();
+      roomDisplay.innerText = `Your Room Code: ${roomId}`;
       
       socket.emit('join-room', roomId);
+      
+      hostBtn.disabled = true;
       joinBtn.disabled = true;
       roomIdInput.disabled = true;
     });
 
-    // When another user joins the room
+    // Join Action: Enter 4-digit code
+    joinBtn.addEventListener('click', () => {
+      roomId = roomIdInput.value.trim();
+      if (roomId.length !== 4) {
+        return alert('Please enter a valid 4-digit code.');
+      }
+      
+      socket.emit('join-room', roomId);
+      
+      roomDisplay.innerText = `Connected to Room: ${roomId}`;
+      hostBtn.disabled = true;
+      joinBtn.disabled = true;
+      roomIdInput.disabled = true;
+    });
+
+    // When another peer connects to the room
     socket.on('user-connected', async (peerId) => {
-      targetPeerId = peerId;
       createPeerConnection(peerId);
 
-      // Create SDP Offer
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
 
@@ -172,9 +228,7 @@
       });
     });
 
-    // Receive Offer
     socket.on('offer', async (data) => {
-      targetPeerId = data.caller;
       createPeerConnection(data.caller);
 
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
@@ -187,12 +241,10 @@
       });
     });
 
-    // Receive Answer
     socket.on('answer', async (data) => {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
     });
 
-    // Receive ICE Candidate
     socket.on('ice-candidate', async (data) => {
       try {
         if (peerConnection) {
@@ -203,7 +255,6 @@
       }
     });
 
-    // Peer disconnected
     socket.on('user-disconnected', () => {
       if (remoteVideo.srcObject) {
         remoteVideo.srcObject.getTracks().forEach(track => track.stop());
@@ -213,25 +264,22 @@
         peerConnection.close();
         peerConnection = null;
       }
+      alert('The other user has left the call.');
     });
 
-    // Create RTCPeerConnection object
     function createPeerConnection(peerId) {
       peerConnection = new RTCPeerConnection(rtcConfig);
 
-      // Add local media tracks to connection
       localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
       });
 
-      // Handle incoming remote media stream
       peerConnection.ontrack = (event) => {
         if (remoteVideo.srcObject !== event.streams[0]) {
           remoteVideo.srcObject = event.streams[0];
         }
       };
 
-      // Handle ICE Candidates generated locally
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
           socket.emit('ice-candidate', {
