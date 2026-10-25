@@ -3,152 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
- <link rel="icon" type="image/png" href="https://i.postimg.cc/JhkxQHWc/jakereal.jpg" />
-  <title>MrGreens Vibecoded Google Meet</title>
+  <title>Vibecoded meet mrgreen</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    body {
-      background-color: #121212;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-    }
-
-    .controls-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 25px;
-      background: #1e1e1e;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .action-row {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-      justify-content: center;
-    }
-
-    input {
-      padding: 10px 15px;
-      font-size: 16px;
-      border: 1px solid #333;
-      border-radius: 6px;
-      outline: none;
-      background-color: #2a2a2a;
-      color: #fff;
-      text-align: center;
-      letter-spacing: 2px;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    button.secondary {
-      background-color: #28a745;
-    }
-    button.secondary:hover {
-      background-color: #218838;
-    }
-
-    #roomDisplay {
-      font-size: 18px;
-      font-weight: bold;
-      color: #4cd137;
-      margin-top: 5px;
-    }
-
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-      width: 100%;
-      max-width: 1000px;
-    }
-
-    .video-card {
-      position: relative;
-      background-color: #1e1e1e;
-      border-radius: 12px;
-      overflow: hidden;
-      aspect-ratio: 16 / 9;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .label {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background-color: rgba(0, 0, 0, 0.6);
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 14px;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #121212; color: #ffffff; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 900px; margin-bottom: 20px; background: #1e1e1e; padding: 15px 20px; border-radius: 12px; }
+    #roomDisplay { font-size: 16px; font-weight: bold; color: #4cd137; word-break: break-all; }
+    button { padding: 8px 14px; font-size: 14px; border: none; border-radius: 6px; background-color: #dc3545; color: white; cursor: pointer; transition: background-color 0.2s; }
+    button:hover { background-color: #bd2130; }
+    button.primary { background-color: #007bff; }
+    button.primary:hover { background-color: #0056b3; }
+    .media-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+    .video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 900px; }
+    @media (max-width: 600px) { .video-grid { grid-template-columns: 1fr; } }
+    .video-card { position: relative; background-color: #1e1e1e; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 1px solid #2d2d2d; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .label { position: absolute; bottom: 10px; left: 10px; background-color: rgba(0, 0, 0, 0.65); padding: 4px 10px; border-radius: 4px; font-size: 13px; }
   </style>
 </head>
 <body>
 
-  <h1>Video Call App</h1>
-
-  <div class="controls-container" id="setupContainer">
-    <!-- Host Section -->
-    <button id="hostBtn" class="secondary">Host a Room</button>
-    <div id="roomDisplay"></div>
-
-    <hr style="width:100%; border:0; border-top:1px solid #333; margin: 5px 0;">
-
-    <!-- Join Section -->
-    <div class="action-row">
-      <input type="text" id="roomIdInput" placeholder="Enter 4-Digit Code" maxlength="4" />
-      <button id="joinBtn">Join Room</button>
-    </div>
+  <div class="header-bar">
+    <div id="roomDisplay">Loading Room...</div>
+    <button id="copyBtn" class="primary" style="margin-right: 10px;">Copy Share URL</button>
+    <button id="leaveBtn">Leave Room</button>
   </div>
 
-  <div class="video-grid">
+  <div class="media-bar">
+    <button id="toggleAudioBtn" class="primary">Mute Mic</button>
+    <button id="toggleVideoBtn" class="primary">Turn Off Camera</button>
+  </div>
+
+  <div class="video-grid" id="videoGrid">
     <div class="video-card">
       <video id="localVideo" autoplay playsinline muted></video>
       <div class="label">You</div>
-    </div>
-    <div class="video-card">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <div class="label">Peer</div>
     </div>
   </div>
 
@@ -156,17 +45,32 @@
   <script>
     const socket = io();
 
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const roomIdInput = document.getElementById('roomIdInput');
-    const joinBtn = document.getElementById('joinBtn');
-    const hostBtn = document.getElementById('hostBtn');
+    // Extract room ID from the URL path (e.g., /1234 -> 1234)
+    const pathSegments = window.location.pathname.split('/');
+    const roomId = pathSegments[pathSegments.length - 1];
+
     const roomDisplay = document.getElementById('roomDisplay');
-    const setupContainer = document.getElementById('setupContainer');
+    const copyBtn = document.getElementById('copyBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+    const videoGrid = document.getElementById('videoGrid');
+    const localVideo = document.getElementById('localVideo');
+    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+    const toggleVideoBtn = document.getElementById('toggleVideoBtn');
 
     let localStream;
-    let peerConnection;
-    let roomId;
+    const peerConnections = {};
+
+    roomDisplay.innerText = `Room Code: ${roomId} (${window.location.href})`;
+
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href);
+      copyBtn.innerText = 'Copied URL!';
+      setTimeout(() => copyBtn.innerText = 'Copy Share URL', 2000);
+    });
+
+    leaveBtn.addEventListener('click', () => {
+      window.location.href = '/';
+    });
 
     const rtcConfig = {
       iceServers: [
@@ -175,120 +79,121 @@
       ]
     };
 
-    // Initialize Camera/Mic
-    async function initLocalStream() {
+    async function init() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
+        
+        // Connect to signaling server once media is ready
+        socket.emit('join-room', roomId);
       } catch (err) {
-        console.error('Error accessing media devices:', err);
+        console.error('Media access error:', err);
         alert('Could not access camera or microphone.');
       }
     }
 
-    initLocalStream();
+    init();
 
-    // Host Action: Generate random 4-digit code
-    hostBtn.addEventListener('click', () => {
-      roomId = Math.floor(1000 + Math.random() * 9000).toString();
-      roomDisplay.innerText = `Your Room Code: ${roomId}`;
-      
-      socket.emit('join-room', roomId);
-      
-      hostBtn.disabled = true;
-      joinBtn.disabled = true;
-      roomIdInput.disabled = true;
+    socket.on('room-full', (data) => {
+      alert(data.message);
+      window.location.href = '/';
     });
 
-    // Join Action: Enter 4-digit code
-    joinBtn.addEventListener('click', () => {
-      roomId = roomIdInput.value.trim();
-      if (roomId.length !== 4) {
-        return alert('Please enter a valid 4-digit code.');
-      }
-      
-      socket.emit('join-room', roomId);
-      
-      roomDisplay.innerText = `Connected to Room: ${roomId}`;
-      hostBtn.disabled = true;
-      joinBtn.disabled = true;
-      roomIdInput.disabled = true;
-    });
-
-    // When another peer connects to the room
-    socket.on('user-connected', async (peerId) => {
-      createPeerConnection(peerId);
-
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      socket.emit('offer', {
-        target: peerId,
-        sdp: offer
+    socket.on('all-users', (users) => {
+      users.forEach(peerId => {
+        const pc = createPeerConnection(peerId);
+        peerConnections[peerId] = pc;
+        pc.createOffer()
+          .then(offer => pc.setLocalDescription(offer))
+          .then(() => socket.emit('offer', { target: peerId, sdp: pc.localDescription }));
       });
     });
 
     socket.on('offer', async (data) => {
-      createPeerConnection(data.caller);
-
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-
-      socket.emit('answer', {
-        target: data.caller,
-        sdp: answer
-      });
+      const pc = createPeerConnection(data.caller);
+      peerConnections[data.caller] = pc;
+      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('answer', { target: data.caller, sdp: answer });
     });
 
     socket.on('answer', async (data) => {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const pc = peerConnections[data.responder];
+      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
     });
 
     socket.on('ice-candidate', async (data) => {
-      try {
-        if (peerConnection) {
-          await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      const pc = peerConnections[data.from];
+      if (pc) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error('Error adding ICE candidate:', e);
       }
     });
 
-    socket.on('user-disconnected', () => {
-      if (remoteVideo.srcObject) {
-        remoteVideo.srcObject.getTracks().forEach(track => track.stop());
-        remoteVideo.srcObject = null;
+    socket.on('user-disconnected', (peerId) => {
+      if (peerConnections[peerId]) {
+        peerConnections[peerId].close();
+        delete peerConnections[peerId];
       }
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-      alert('The other user has left the call.');
+      const card = document.getElementById(`card-${peerId}`);
+      if (card) card.remove();
     });
 
     function createPeerConnection(peerId) {
-      peerConnection = new RTCPeerConnection(rtcConfig);
+      const pc = new RTCPeerConnection(rtcConfig);
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-      localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-      });
+      pc.ontrack = (event) => {
+        let card = document.getElementById(`card-${peerId}`);
+        if (!card) {
+          card = document.createElement('div');
+          card.className = 'video-card';
+          card.id = `card-${peerId}`;
 
-      peerConnection.ontrack = (event) => {
-        if (remoteVideo.srcObject !== event.streams[0]) {
-          remoteVideo.srcObject = event.streams[0];
+          const video = document.createElement('video');
+          video.id = `video-${peerId}`;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.srcObject = event.streams[0];
+
+          const label = document.createElement('div');
+          label.className = 'label';
+          label.innerText = `User (${peerId.slice(0, 4)})`;
+
+          card.appendChild(video);
+          card.appendChild(label);
+          videoGrid.appendChild(card);
         }
       };
 
-      peerConnection.onicecandidate = (event) => {
+      pc.onicecandidate = (event) => {
         if (event.candidate) {
-          socket.emit('ice-candidate', {
-            target: peerId,
-            candidate: event.candidate
-          });
+          socket.emit('ice-candidate', { target: peerId, candidate: event.candidate });
         }
       };
+
+      return pc;
     }
+
+    let isAudioMuted = false;
+    toggleAudioBtn.addEventListener('click', () => {
+      isAudioMuted = !isAudioMuted;
+      localStream.getAudioTracks()[0].enabled = !isAudioMuted;
+      toggleAudioBtn.innerText = isAudioMuted ? 'Unmute Mic' : 'Mute Mic';
+      toggleAudioBtn.style.backgroundColor = isAudioMuted ? '#dc3545' : '#007bff';
+    });
+
+    let isVideoOff = false;
+    toggleVideoBtn.addEventListener('click', () => {
+      isVideoOff = !isVideoOff;
+      localStream.getVideoTracks()[0].enabled = !isVideoOff;
+      toggleVideoBtn.innerText = isVideoOff ? 'Turn On Camera' : 'Turn Off Camera';
+      toggleVideoBtn.style.backgroundColor = isVideoOff ? '#dc3545' : '#007bff';
+    });
   </script>
 </body>
 </html>
