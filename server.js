@@ -12,15 +12,17 @@ const io = new Server(server, {
   }
 });
 
-// Serve static frontend files from "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Join a specific video room
+  // Host or Join a room
   socket.on('join-room', (roomId) => {
     socket.join(roomId);
+    console.log(`User ${socket.id} joined room: ${roomId}`);
+    
+    // Notify other users already in the room
     socket.to(roomId).emit('user-connected', socket.id);
 
     // Relay WebRTC SDP Offer
@@ -49,12 +51,12 @@ io.on('connection', (socket) => {
 
     // Handle user disconnect
     socket.on('disconnect', () => {
+      console.log(`User disconnected: ${socket.id}`);
       socket.to(roomId).emit('user-disconnected', socket.id);
     });
   });
 });
 
-// Render automatically sets PORT via environment variable
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
